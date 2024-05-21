@@ -1,3 +1,5 @@
 *.onnx
 *.keras
 openface
+*.png
+*.jpg
