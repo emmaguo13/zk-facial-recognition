@@ -1,0 +1,11 @@
+*.onnx
+*.keras
+openface
+*.png
+*.jpg
+*.json
+network.compiled
+*.pk
+*.vk
+*.pth
+__pycache__/

@@ -1,0 +1,9 @@
+deepface
+numpy
+opencv-python
+ezkl
+tf2onnx
+torch
+onnx2torch
+onnx
+ipykernel
