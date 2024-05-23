@@ -3,6 +3,7 @@
 openface
 *.png
 *.jpg
+*.jpeg
 *.json
 network.compiled
 *.pk

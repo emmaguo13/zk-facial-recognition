@@ -7,7 +7,11 @@ from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 from collections import OrderedDict
 from deepface import DeepFace
-import cv2
+from facenet_pytorch import MTCNN
+from PIL import Image
+from matplotlib import pyplot as plt
+
+mtcnn = MTCNN(keep_all=False)
 
 try:
     from . SpatialCrossMapLRN_temp import SpatialCrossMapLRN_temp
@@ -255,8 +259,8 @@ class Inception(nn.Module):
             # print(pad_l, pad_t, pad_r, pad_b)
             pad_l, pad_t, pad_r, pad_b = padding_values[self.counter + i]
             ys[i] = F.pad(ys[i], (pad_l, pad_r, pad_t, pad_b))
-            print(f"Layer {self.counter + i}: Padded size = {ys[i].size()}")
-            print(i)
+            # print(f"Layer {self.counter + i}: Padded size = {ys[i].size()}")
+            # print(i)
 
         output = torch.cat(ys, 1)
         return output
@@ -303,30 +307,7 @@ class netOpenFace(nn.Module):
 
 
     def forward(self, input):
-
-        def ReadImage(pathname):
-            img = DeepFace.extract_faces(img_path=pathname)[0]["face"]
-            # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-            img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_LINEAR)
-            img = numpy.transpose(img, (2, 0, 1))
-            print(img.shape)
-            img = img.astype(numpy.float32) / 255.0
-            # print(numpy.min(img), numpy.max(img))
-            # print(numpy.sum(img[0]), numpy.sum(img[1]), numpy.sum(img[2]))
-            I_ = torch.from_numpy(img).unsqueeze(0)
-            if useCuda:
-                I_ = I_.cuda()
-            return I_
-        img_paths = input
-
-        imgs = []
-        for img_path in img_paths:
-            imgs.append(ReadImage(img_path))
-
-        I_ = torch.cat(imgs, 0)
-        I_ = Variable(I_, requires_grad=False)
-    
-        x = I_
+        x = input
 
         if x.data.is_cuda and self.gpuDevice != 0:
             x = x.cuda(self.gpuDevice)
@@ -337,21 +318,16 @@ class netOpenFace(nn.Module):
 
         x = self.layer8(self.layer7(self.layer6(self.layer5(self.layer4(self.layer3(self.layer2(self.layer1(x))))))))
         x = self.layer13(self.layer12(self.layer11(self.layer10(self.layer9(x)))))
-        print('new layer 14')
+        # print('new layer 14')
         x = self.layer14(x)
-        print('new layer 15')
+        # print('new layer 15')
         x = self.layer15(x)
-        print('new layer 16')
+        # print('new layer 16')
         x = self.layer16(x)
-        print('new layer 17')
         x = self.layer17(x)
-        print('new layer 18')
         x = self.layer18(x)
-        print('new layer 19')
         x = self.layer19(x)
-        print('new layer 21')
         x = self.layer21(x)
-        print('new layer 22')
         x = self.layer22(x)
         x = x.view((-1, 736))
 
@@ -361,22 +337,16 @@ class netOpenFace(nn.Module):
         x_norm = torch.sqrt(torch.sum(x**2, 1) + 1e-6)
         x = torch.div(x, x_norm.view(-1, 1).expand_as(x))
 
-        # emb1 = x_736[0]
-        # emb2 = x_736[1]
-        # cos_sim = torch.nn.functional.cosine_similarity(emb1, emb2, dim=0)
-        # print(f"Similarity between {img_paths[0].split('/')[-1]} and {img_paths[1].split('/')[-1]}: {cos_sim.item()}")
+        emb1 = x[0]
+        emb2 = x[1]
 
-        emdb1 = x_736[0]
-        emdb2 = x_736[1]
+        print(f"Shape of emb1: {emb1.shape}")
+        print(f"Shape of emb2: {emb2.shape}")
 
-        df = emdb1 - emdb2 
-        euc_dist = torch.dot(df, df)
-
-        print("euclidean distance", euc_dist)
-        # cos_sim = 0
-        # return (cos_sim, x, x_736)
-        # return (x, x_736)
-        return (euc_dist, x, x_736)
+        cos_sim = torch.nn.functional.cosine_similarity(emb1, emb2, dim=0)
+        print(f"Similarity between {img_paths[0].split('/')[-1]} and {img_paths[1].split('/')[-1]}: {cos_sim.item()}")
+        
+        return (cos_sim, x, x_736)
 
 
 def prepareOpenFace(useCuda=True, gpuDevice=0, useMultiGPU=False):
@@ -412,32 +382,75 @@ if __name__ == '__main__':
     # print(nof(I_))
 
 
-    # def ReadImage(pathname):
-    #     img = DeepFace.extract_faces(img_path=pathname)[0]["face"]
-    #     # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    #     img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_LINEAR)
-    #     img = numpy.transpose(img, (2, 0, 1))
-    #     print(img.shape)
-    #     img = img.astype(numpy.float32) / 255.0
-    #     # print(numpy.min(img), numpy.max(img))
-    #     # print(numpy.sum(img[0]), numpy.sum(img[1]), numpy.sum(img[2]))
-    #     I_ = torch.from_numpy(img).unsqueeze(0)
-    #     if useCuda:
-    #         I_ = I_.cuda()
-    #     return I_
 
-    # img_paths = ['emmapassport.png', 'kayleepassport.jpg']
-    img_paths = ['emmaselfie.png', 'emmapassport.png']
-    # imgs = []
-    # for img_path in img_paths:
-    #     imgs.append(ReadImage(img_path))
+    #
+    import cv2
 
-    # I_ = torch.cat(imgs, 0)
-    # I_ = Variable(I_, requires_grad=False)
+    def ReadImage(image_path):
+    # Read the image using OpenCV
+        img = cv2.imread(image_path)
+        
+        # Convert the image from BGR to RGB
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
+        # Convert to PIL Image format
+        img_pil = Image.fromarray(img_rgb)
+        # img_pil.show()
+        
+        # Detect and align the face
+        aligned_face, prob = mtcnn(img_pil, return_prob=True)
+
+        if aligned_face is not None:
+            # Convert the tensor to a numpy array and change from CHW to HWC format
+            print(aligned_face.shape)
+
+            aligned_face_np = aligned_face.permute(1, 2, 0).cpu().numpy()
+
+            # plt.imshow(aligned_face_np)
+
+            aligned_face_np = numpy.clip(aligned_face_np, 0, 1) * 255
+
+            aligned_face_np = aligned_face_np.astype(numpy.uint8)
+
+            # aligned_face_np = aligned_face.permute(1, 2, 0).mul(255).byte().numpy()
+
+            aligned_face_pil = Image.fromarray(aligned_face_np)
+            
+            # Display the PIL Image
+            aligned_face_pil.show(title=f"Aligned Face")
+            
+            # Convert the numpy array to BGR format expected by OpenCV
+            aligned_face_bgr = cv2.cvtColor(aligned_face_np, cv2.COLOR_RGB2BGR)
+            
+            # Resize the image to 96x96 pixels (OpenFace input size)
+            resized_face = cv2.resize(aligned_face_bgr, (96, 96))
+
+            cv2.imshow(f'Aligned Face', resized_face)
+            
+            # Normalize the pixel values
+            resized_face = resized_face.astype(numpy.float32) / 255.0
+            
+            # Convert to PyTorch tensor and change from HWC to CHW format
+            aligned_face_tensor = torch.tensor(resized_face).permute(2, 0, 1).float()
+            
+            return aligned_face_tensor.unsqueeze(0)  # Add batch dimension
+        else:
+            print(f"No face detected in {image_path}")
+            return None
+
+
+
+    img_paths = ['emmapassport.png', 'eshaanphoto.png']
+    imgs = []
+    for img_path in img_paths:
+        imgs.append(ReadImage(img_path))
+
+    I_ = torch.cat(imgs, 0)
+    I_ = Variable(I_, requires_grad=False)
 
     # torch.onnx.export(nof,               # model being run
     #                   I_,                   # model input (or a tuple for multiple inputs)
-    #                   "openface_pt_native_two_base64.onnx",            # where to save the model (can be a file or file-like object)
+    #                   "openface_pt_native.onnx",            # where to save the model (can be a file or file-like object)
     #                   export_params=True,        # store the trained parameter weights inside the model file
     #                   opset_version=10,          # the ONNX version to export the model to
     #                   do_constant_folding=True,  # whether to execute constant folding for optimization
@@ -447,13 +460,12 @@ if __name__ == '__main__':
     #                                 'output' : {0 : 'batch_size'}})
 
     start = time.time()
-    cosine, f, f_736= nof(img_paths)
-    # print("  + Forward pass took {} seconds.".format(time.time() - start))
+    cos_sim, f, f_736 = nof(I_)
+    print("  + Forward pass took {} seconds.".format(time.time() - start))
     # print(f)
-    # for i in range(f_736.size(0) - 1):
-    #     for j in range(i + 1, f_736.size(0)):
-    #         df = f_736[i] - f_736[j]
-    #         print(img_paths[i].split('/')[-1], img_paths[j].split('/')[-1], torch.dot(df, df))
+    for i in range(f_736.size(0) - 1):
+        for j in range(i + 1, f_736.size(0)):
+            df = f_736[i] - f_736[j]
+            print(img_paths[i].split('/')[-1], img_paths[j].split('/')[-1], torch.dot(df, df))
 
     # in OpenFace's sample code, cosine distance is usually used for f (128d).
-    

@@ -7,3 +7,5 @@ torch
 onnx2torch
 onnx
 ipykernel
+Pillow
+facenet_pytorch

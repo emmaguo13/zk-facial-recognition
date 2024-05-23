@@ -6,8 +6,6 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 from collections import OrderedDict
-from deepface import DeepFace
-
 try:
     from . SpatialCrossMapLRN_temp import SpatialCrossMapLRN_temp
 except:
@@ -62,10 +60,9 @@ def Linear(in_dim, out_dim):
 
 
 class Inception(nn.Module):
-    def __init__(self, inputSize, kernelSize, kernelStride, outputSize, reduceSize, pool, useBatchNorm, reduceStride=None, padding=True, count=0):
+    def __init__(self, inputSize, kernelSize, kernelStride, outputSize, reduceSize, pool, useBatchNorm, reduceStride=None, padding=True):
         super(Inception, self).__init__()
         #
-        self.counter = count
         self.seq_list = []
         self.outputSize = outputSize
 
@@ -141,123 +138,16 @@ class Inception(nn.Module):
         target_size[1] = depth_dim
         #print('target_size:', target_size)
 
-        # padding_values = [
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (3, 3, 4, 4),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (4, 4, 4, 4),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 1, 1),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (2, 2, 2, 2),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 1, 1),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (1, 1, 1, 1),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (1, 1, 1, 1),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (3, 3, 4, 4),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (4, 4, 4, 4),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 1, 1),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (2, 2, 2, 2),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 1, 1),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (1, 1, 1, 1),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (0, 0, 0, 0),  # padding
-        #     (1, 1, 1, 1),  # padding
-        #     (0, 0, 0, 0)   # padding
-        # ]
-
-        padding_values = [
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (3, 3, 4, 4),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (4, 4, 4, 4),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 1, 1),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (2, 2, 2, 2),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 1, 1),
-            (0, 0, 0, 0),
-            (1, 1, 1, 1),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (1, 1, 1, 1),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (3, 3, 4, 4),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (4, 4, 4, 4),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 1, 1),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (2, 2, 2, 2),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (0, 0, 1, 1),
-            (0, 0, 0, 0),
-            (1, 1, 1, 1),
-            (0, 0, 0, 0),
-            (0, 0, 0, 0),
-            (1, 1, 1, 1),
-            (0, 0, 0, 0)
-        ]
-
         for i in range(len(ys)):
             y_size = ys[i].size()
-            # pad_l = int((target_size[3] - y_size[3]) // 2)
-            # pad_t = int((target_size[2] - y_size[2]) // 2)
-            # pad_r = target_size[3] - y_size[3] - pad_l
-            # pad_b = target_size[2] - y_size[2] - pad_t
-            # print("padding")
-            # print(pad_l, pad_t, pad_r, pad_b)
-            pad_l, pad_t, pad_r, pad_b = padding_values[self.counter + i]
+            pad_l = int((target_size[3] - y_size[3]) // 2)
+            pad_t = int((target_size[2] - y_size[2]) // 2)
+            pad_r = target_size[3] - y_size[3] - pad_l
+            pad_b = target_size[2] - y_size[2] - pad_t
             ys[i] = F.pad(ys[i], (pad_l, pad_r, pad_t, pad_b))
-            print(f"Layer {self.counter + i}: Padded size = {ys[i].size()}")
-            print(i)
 
         output = torch.cat(ys, 1)
+
         return output
 
 
@@ -280,13 +170,13 @@ class netOpenFace(nn.Module):
         self.layer11 = nn.ReLU()
         self.layer12 = CrossMapLRN(5, 0.0001, 0.75, gpuDevice=gpuDevice)
         self.layer13 = nn.MaxPool2d((3,3), stride=(2,2), padding=(1,1))
-        self.layer14 = Inception(192, (3,5), (1,1), (128,32), (96,16,32,64), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True, count=0)
-        self.layer15 = Inception(256, (3,5), (1,1), (128,64), (96,32,64,64), nn.LPPool2d(2, (3,3), stride=(3,3)), True, count=4)
-        self.layer16 = Inception(320, (3,5), (2,2), (256,64), (128,32,None,None), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True, count=8)
-        self.layer17 = Inception(640, (3,5), (1,1), (192,64), (96,32,128,256), nn.LPPool2d(2, (3,3), stride=(3,3)), True, count=11)
-        self.layer18 = Inception(640, (3,5), (2,2), (256,128), (160,64,None,None), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True, count=15)
-        self.layer19 = Inception(1024, (3,), (1,), (384,), (96,96,256), nn.LPPool2d(2, (3,3), stride=(3,3)), True, count=18)
-        self.layer21 = Inception(736, (3,), (1,), (384,), (96,96,256), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True, count=21)
+        self.layer14 = Inception(192, (3,5), (1,1), (128,32), (96,16,32,64), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True)
+        self.layer15 = Inception(256, (3,5), (1,1), (128,64), (96,32,64,64), nn.LPPool2d(2, (3,3), stride=(3,3)), True)
+        self.layer16 = Inception(320, (3,5), (2,2), (256,64), (128,32,None,None), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True)
+        self.layer17 = Inception(640, (3,5), (1,1), (192,64), (96,32,128,256), nn.LPPool2d(2, (3,3), stride=(3,3)), True)
+        self.layer18 = Inception(640, (3,5), (2,2), (256,128), (160,64,None,None), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True)
+        self.layer19 = Inception(1024, (3,), (1,), (384,), (96,96,256), nn.LPPool2d(2, (3,3), stride=(3,3)), True)
+        self.layer21 = Inception(736, (3,), (1,), (384,), (96,96,256), nn.MaxPool2d((3,3), stride=(2,2), padding=(0,0)), True)
         self.layer22 = nn.AvgPool2d((3,3), stride=(1,1), padding=(0,0))
         self.layer25 = Linear(736, 128)
 
@@ -313,21 +203,13 @@ class netOpenFace(nn.Module):
 
         x = self.layer8(self.layer7(self.layer6(self.layer5(self.layer4(self.layer3(self.layer2(self.layer1(x))))))))
         x = self.layer13(self.layer12(self.layer11(self.layer10(self.layer9(x)))))
-        print('new layer 14')
         x = self.layer14(x)
-        print('new layer 15')
         x = self.layer15(x)
-        print('new layer 16')
         x = self.layer16(x)
-        print('new layer 17')
         x = self.layer17(x)
-        print('new layer 18')
         x = self.layer18(x)
-        print('new layer 19')
         x = self.layer19(x)
-        print('new layer 21')
         x = self.layer21(x)
-        print('new layer 22')
         x = self.layer22(x)
         x = x.view((-1, 736))
 
@@ -336,11 +218,11 @@ class netOpenFace(nn.Module):
         x = self.layer25(x)
         x_norm = torch.sqrt(torch.sum(x**2, 1) + 1e-6)
         x = torch.div(x, x_norm.view(-1, 1).expand_as(x))
-        
+
         return (x, x_736)
 
 
-def prepareOpenFace(useCuda=True, gpuDevice=0, useMultiGPU=False):
+def prepareOpenFace(useCuda=False, gpuDevice=0, useMultiGPU=False):
     model = netOpenFace(useCuda, gpuDevice)
     model.load_state_dict(torch.load(os.path.join(containing_dir, 'openface-nocuda.pth')))
 
@@ -356,8 +238,9 @@ if __name__ == '__main__':
     if useCuda:
         assert torch.cuda.is_available()
 
-    nof = prepareOpenFace(useCuda=useCuda)
+    nof = prepareOpenFace()
     nof = nof.eval()
+
 
     # test
     #
@@ -368,9 +251,9 @@ if __name__ == '__main__':
     if useCuda:
         I_ = I_.cuda()
 
-    # print(nof)
+    print(nof)
     I_ = Variable(I_)
-    # print(nof(I_))
+    print(nof(I_))
 
 
 
@@ -378,39 +261,28 @@ if __name__ == '__main__':
     import cv2
 
     def ReadImage(pathname):
-        # img = DeepFace.extract_faces(img_path=pathname)[0]["face"]
         img = cv2.imread(pathname)
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         img = cv2.resize(img, (96, 96), interpolation=cv2.INTER_LINEAR)
         img = numpy.transpose(img, (2, 0, 1))
-        print(img.shape)
         img = img.astype(numpy.float32) / 255.0
-        # print(numpy.min(img), numpy.max(img))
-        # print(numpy.sum(img[0]), numpy.sum(img[1]), numpy.sum(img[2]))
+        print(numpy.min(img), numpy.max(img))
+        print(numpy.sum(img[0]), numpy.sum(img[1]), numpy.sum(img[2]))
         I_ = torch.from_numpy(img).unsqueeze(0)
         if useCuda:
             I_ = I_.cuda()
         return I_
 
-    img_paths = ['emmapassport.png', 'emmaselfie.png']
+    img_paths = [	\
+        'emmapassport.png',
+        'amosphoto.jpg'
+    ]
     imgs = []
     for img_path in img_paths:
         imgs.append(ReadImage(img_path))
 
     I_ = torch.cat(imgs, 0)
     I_ = Variable(I_, requires_grad=False)
-
-    # torch.onnx.export(nof,               # model being run
-    #                   I_,                   # model input (or a tuple for multiple inputs)
-    #                   "openface_pt_native.onnx",            # where to save the model (can be a file or file-like object)
-    #                   export_params=True,        # store the trained parameter weights inside the model file
-    #                   opset_version=10,          # the ONNX version to export the model to
-    #                   do_constant_folding=True,  # whether to execute constant folding for optimization
-    #                   input_names = ['input'],   # the model's input names
-    #                   output_names = ['output'], # the model's output names
-    #                   dynamic_axes={'input' : {0 : 'batch_size'},    # variable length axes
-    #                                 'output' : {0 : 'batch_size'}})
-
     start = time.time()
     f, f_736 = nof(I_)
     print("  + Forward pass took {} seconds.".format(time.time() - start))
